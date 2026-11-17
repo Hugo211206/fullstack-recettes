@@ -64,7 +64,6 @@ function validateUpdateRecipe(req, res, next) {
     return next(invalid('Le corps doit être un objet JSON'));
   }
 
-  // Un PATCH vide ne modifie rien : refusé
   if (Object.keys(body).length === 0) {
     return next(invalid('Aucun champ à modifier'));
   }
@@ -75,7 +74,6 @@ function validateUpdateRecipe(req, res, next) {
     }
   }
 
-  // Mêmes règles qu'à la création, mais chaque champ est optionnel
   if (body.title !== undefined && (typeof body.title !== 'string' || body.title.trim().length < 1 || body.title.trim().length > 120)) {
     return next(invalid('title doit contenir entre 1 et 120 caractères'));
   }

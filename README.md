@@ -12,13 +12,13 @@ Projet individuel réalisé dans le cadre du module **Full Stack JS** (Master 1 
 
 ### MVP
 - Inscription et connexion d'un utilisateur (mot de passe haché avec bcrypt, session par JWT).
-- Liste des recettes **du compte connecté uniquement**.
+- **Partage des recettes** : chaque utilisateur connecté voit et consulte les recettes de toute la communauté.
 - Ajout, consultation du détail, modification et suppression d'une recette.
-- **Filtre par catégorie et recherche par titre** dans la liste (toujours limités aux recettes du compte).
+- **Filtre par catégorie et recherche par titre** dans la liste des recettes.
 - **Favoris** : marquer / retirer une recette des favoris et n'afficher que les favoris.
 - Validation des données côté serveur (et aide à la saisie côté React).
 - Données persistantes dans MongoDB (conservées après redémarrage de l'API).
-- Isolation stricte des comptes : un utilisateur ne peut ni voir, ni modifier, ni supprimer les recettes d'un autre, y compris par requête HTTP directe.
+- Propriété des recettes : seul l'auteur d'une recette peut la modifier ou la supprimer, y compris par requête HTTP directe.
 - Interface responsive, utilisable au clavier.
 
 ### Ressource métier : `>Recette`
@@ -32,7 +32,7 @@ Projet individuel réalisé dans le cadre du module **Full Stack JS** (Master 1 
 | `instructions` | string | 0 à 5000 caractères, chaîne vide acceptée | Non (défaut `""`) |
 | `favorite` | boolean | `true` ou `false` uniquement (`false` est une valeur valide) | Non (défaut `false`) |
 
-Champs gérés uniquement par le serveur : `id` (chaîne, ObjectId sérialisé) et `ownerId` (déduit du JWT).
+Champs gérés uniquement par le serveur : `id` (chaîne, ObjectId sérialisé) et `ownerId` (identifiant de l'auteur, déduit du JWT, renvoyé en lecture pour savoir si la recette appartient à l'utilisateur connecté).
 
 ---
 
@@ -43,7 +43,7 @@ Champs gérés uniquement par le serveur : `id` (chaîne, ObjectId sérialisé) 
 | Langage | JavaScript / Nodejs |
 | Front-end | React + Vite + React Router |
 | Back-end | Node.js + Express |1
-| Base de données | MongoDB (Atlas) + Mongoose |
+| Base de données | MongoDB 8 (conteneur Docker) + Mongoose, visualisée avec MongoDB Compass |
 | Authentification | bcrypt (hachage), jsonwebtoken (JWT), middleware Bearer |
 | Tests | Jest + Supertest + mongodb-memory-server |
 | Documentation API | OpenAPI 3 + swagger-ui-express |
@@ -56,7 +56,8 @@ Versions exactes : voir les fichiers `backend/package.json` et `frontend/package
 
 - **Node.js** ≥ 20 (LTS) et **npm** ≥ 10 — vérifier avec `node -v` et `npm -v`.
 - **Git**.
-- Un accès à une base **MongoDB** : cluster gratuit MongoDB Atlas (recommandé) ou MongoDB Community Server installé en local.
+- **Docker Desktop** (avec Docker Compose) pour faire tourner la base MongoDB — vérifier avec `docker compose version`.
+- **MongoDB Compass** (facultatif) pour visualiser les données.
 
 ---
 
@@ -96,33 +97,51 @@ Le back-end lit sa configuration dans `backend/.env` (chargé via `dotenv`).
 | Variable | Rôle | Exemple (fictif) |
 |---|---|---|
 | `PORT` | Port d'écoute de l'API | `3000` |
-| `MONGODB_URI` | URL de connexion MongoDB | `mongodb+srv://user:password@cluster0.example.mongodb.net/carnet-recettes` |
+| `MONGODB_URI` | URL de connexion MongoDB | `mongodb://127.0.0.1:27017/carnet-recettes` |
 | `JWT_SECRET` | Clé de signature des JWT (longue et aléatoire) | `change-me` |
-| `JWT_EXPIRES_IN` | Durée de validité d'un JWT | `1h` |
+| `JWT_EXPIRES_IN` | Durée de validité d'un JWT | `24h` |
 
 ---
 
 ## 6. Base de données MongoDB
 
-### Option A — MongoDB Atlas
-1. Créer un cluster gratuit **M0** sur MongoDB Atlas.
-2. *Database Access* : créer un utilisateur (idéalement avec le rôle `readWrite` limité à la base `carnet-recettes`).
-3. *Network Access* : autoriser son adresse IP.
-4. *Connect → Drivers* : copier l'URL de connexion, remplacer `<db_password>` et ajouter le nom de base `carnet-recettes` après le `/`.
-5. Coller cette URL dans `MONGODB_URI` du fichier `backend/.env`.
+La base tourne dans un conteneur **Docker**, décrit par le fichier `docker-compose.yml` à la racine du projet (image officielle `mongo:8.0`, port `27017`, données conservées dans le volume `mongo-data`).
 
-### Option B — MongoDB local
-Installer MongoDB Community Server, puis utiliser :
+Depuis la racine `carnet-recettes/` :
+
+```bash
+docker compose up -d     # démarre MongoDB en arrière-plan
+docker compose ps        # vérifie que le conteneur est "running"
+docker compose down      # arrête MongoDB (les données sont conservées)
+```
+
+> `docker compose down -v` supprime aussi le volume, donc **toutes les données**.
+
+L'API s'y connecte avec :
 
 ```
 MONGODB_URI=mongodb://127.0.0.1:27017/carnet-recettes
 ```
+
+La base `carnet-recettes` est créée automatiquement au premier enregistrement.
+
+### Visualiser les données avec MongoDB Compass
+1. *Add new connection* → URI : `mongodb://localhost:27017` (aucun identifiant).
+2. *Save & Connect*, puis ouvrir la base `carnet-recettes` (collections `recipes` et `users`).
+
+> Modifier les données directement dans Compass contourne les validations de l'API : pour tester l'application, passer par l'API.
 
 > Les **tests automatisés n'utilisent pas** cette base : ils tournent sur une base MongoDB temporaire en mémoire (`mongodb-memory-server`), isolée des données de développement.
 
 ---
 
 ## 7. Lancement
+
+Démarrer la base MongoDB (depuis la racine, une seule fois — elle redémarre ensuite avec Docker Desktop) :
+
+```bash
+docker compose up -d
+```
 
 Lancer l'API (terminal 1) :
 
@@ -166,7 +185,7 @@ Toutes les routes commencent par `/api`. Les corps de requête et de réponse so
 
 ### Filtres de la liste (`GET /api/recipes`)
 
-Paramètres de requête facultatifs et combinables. Le résultat est **toujours** limité aux recettes du compte connecté et garde l'enveloppe `{"items":[...]}`.
+Paramètres de requête facultatifs et combinables. Le résultat porte sur les recettes de toute la communauté et garde l'enveloppe `{"items":[...]}`.
 
 | Paramètre | Valeurs acceptées | Effet |
 |---|---|---|
@@ -217,7 +236,7 @@ route → middleware d'auth → validator → controller → service → modèle
 - **middlewares** : vérification du JWT (`req.userId`) et gestion centralisée des erreurs.
 - **validators** : contrôlent et nettoient le corps de la requête.
 - **controllers** : lisent la requête, appellent le service, renvoient le code HTTP.
-- **services** : contiennent la logique métier (dont le filtrage par `ownerId`).
+- **services** : contiennent la logique métier (dont la vérification de l'auteur via `ownerId`).
 - **models** : schémas Mongoose (`User`, `Recipe`).
 
 ### Arborescence
@@ -225,6 +244,7 @@ route → middleware d'auth → validator → controller → service → modèle
 ```
 carnet-recettes/
 ├── README.md
+├── docker-compose.yml        # base MongoDB (conteneur Docker)
 ├── backend/
 │   ├── src/
 │   │   ├── app.js            # crée l'application Express (sans écouter de port)
@@ -257,8 +277,8 @@ La séparation `app.js` / `server.js` permet aux tests d'importer l'application 
 
 - **Mots de passe** : hachés avec bcrypt, jamais renvoyés dans une réponse (ni `password`, ni `passwordHash`).
 - **JWT** : signé avec `JWT_SECRET` (variable d'environnement serveur), avec une durée de validité (`JWT_EXPIRES_IN`). Envoyé par le front dans l'en-tête `Authorization: Bearer <token>`.
-- **Propriété des données** : `ownerId` est calculé **exclusivement côté serveur** à partir du JWT vérifié. Toutes les requêtes en base filtrent sur `ownerId`.
-- **404 plutôt que 403** pour la recette d'un autre compte : l'API ne révèle pas l'existence de ressources qui n'appartiennent pas à l'utilisateur.
+- **Propriété des données** : `ownerId` est calculé **exclusivement côté serveur** à partir du JWT vérifié et ne peut jamais être envoyé par le client. La lecture est ouverte à tous les comptes connectés ; la modification et la suppression filtrent sur `ownerId`.
+- **404 pour modifier ou supprimer la recette d'un autre compte** : la recherche se fait sur le couple `id` + `ownerId`, donc la recette est introuvable parmi celles de l'utilisateur (codes d'erreur du contrat conservés).
 - **Login** : un échec renvoie `401` sans préciser si c'est l'email ou le mot de passe qui est faux.
 - **Stockage du token côté navigateur** : *(choix à documenter — localStorage, simple mais exposé au XSS, ou mémoire, plus sûr mais perdu au rechargement)*.
 - **Hygiène du dépôt** : `node_modules`, `.env` et tout secret sont exclus de Git.
@@ -281,9 +301,8 @@ Scénarios couverts *(à venir)* :
 - [ ] Parcours CRUD nominal complet (201 / 200 / 200 / 204 / 404 après suppression)
 - [ ] Données invalides → 400 (`category` hors liste, `prepTime` décimal, PATCH vide, `ownerId` fourni…)
 - [ ] Accès sans JWT ou avec JWT falsifié → 401
-- [ ] Isolation : l'utilisateur B ne voit pas, ne lit pas, ne modifie pas et ne supprime pas une recette de A (404)
+- [ ] Propriété : l'utilisateur B voit et lit une recette de A (200), mais ne peut ni la modifier ni la supprimer (404)
 - [ ] Filtres : `?category=dessert` ne renvoie que des desserts, `?q=` trouve un titre sans tenir compte de la casse, un filtre invalide → 400
-- [ ] Isolation des filtres : B ne voit aucune recette de A, même avec `?category=` ou `?q=` qui correspondraient
 - [ ] Favoris : `PATCH {"favorite":true}` → 200, puis `?favorite=true` renvoie la recette ; `favorite` non booléen → 400
 
 ---
@@ -309,7 +328,7 @@ Elle décrit l'authentification Bearer, les routes `health` et `auth`, les cinq 
 
 ## 16. Choix techniques
 
-- **MongoDB Atlas** : pas d'installation locale nécessaire, offre gratuite suffisante, base déjà accessible en cas de déploiement.
+- **MongoDB dans Docker** : pas d'installation de MongoDB sur la machine, même version pour tout le monde (`mongo:8.0`), base démarrée en une commande ; Compass sert d'interface graphique.
 - **Validation manuelle dans `validators/`** : règles explicites et faciles à expliquer, alignées exactement sur le contrat API.
 - **`prepTime` en minutes entières** : évite les ambiguïtés de format (pas de « 1h30 » en texte libre).
 - **`ingredients` en texte libre** : modèle volontairement simple pour le MVP (un ingrédient par ligne).
