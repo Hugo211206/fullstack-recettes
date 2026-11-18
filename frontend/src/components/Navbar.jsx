@@ -11,7 +11,7 @@ function Navbar() {
         {user && (
           <nav className="navbar-links" aria-label="Navigation principale">
             <Link to="/recipes/new" className="btn btn-primary navbar-new">+ Nouvelle recette</Link>
-            <span className="navbar-user">{user.email}</span>
+            <span className="navbar-user">{user.username ?? user.email}</span>
             <button type="button" className="btn btn-secondary" onClick={logout}>
               Déconnexion
             </button>

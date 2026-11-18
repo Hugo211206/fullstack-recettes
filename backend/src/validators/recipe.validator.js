@@ -2,8 +2,11 @@ const AppError = require('../utils/AppError');
 
 const CATEGORIES = ['starter', 'main', 'dessert', 'drink'];
 const ALLOWED_FIELDS = ['title', 'category', 'prepTime', 'ingredients', 'instructions', 'favorite'];
-const ALLOWED_FILTERS = ['category', 'favorite', 'q', 'mine'];
+const ALLOWED_FILTERS = ['category', 'favorite', 'q', 'mine', 'page', 'limit'];
 const BOOLEAN_VALUES = ['true', 'false'];
+const DEFAULT_LIMIT = 12;
+const MAX_LIMIT = 50;
+const POSITIVE_INTEGER = /^[1-9][0-9]{0,5}$/;
 
 function invalid(message) {
   return new AppError(400, 'INVALID_INPUT', message);
@@ -139,11 +142,21 @@ function validateListQuery(req, res, next) {
     return next(invalid('q doit contenir entre 1 et 120 caractères'));
   }
 
+  if (query.page !== undefined && (typeof query.page !== 'string' || !POSITIVE_INTEGER.test(query.page))) {
+    return next(invalid('page doit être un entier supérieur ou égal à 1'));
+  }
+
+  if (query.limit !== undefined && (typeof query.limit !== 'string' || !POSITIVE_INTEGER.test(query.limit) || Number(query.limit) > MAX_LIMIT)) {
+    return next(invalid(`limit doit être un entier entre 1 et ${MAX_LIMIT}`));
+  }
+
   req.filters = {
     category: query.category,
     favorite: query.favorite === undefined ? undefined : query.favorite === 'true',
     q: query.q === undefined ? undefined : query.q.trim(),
     mine: query.mine === 'true',
+    page: query.page === undefined ? 1 : Number(query.page),
+    limit: query.limit === undefined ? DEFAULT_LIMIT : Number(query.limit),
   };
 
   next();

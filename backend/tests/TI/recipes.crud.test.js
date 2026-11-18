@@ -36,6 +36,7 @@ describe('POST /api/recipes', () => {
       instructions: '',
       favorite: false,
       ownerId: user.id,
+      author: { id: user.id, username: user.username },
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
     });
@@ -103,7 +104,7 @@ describe('GET /api/recipes', () => {
     const res = await api().list();
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ items: [] });
+    expect(res.body).toMatchObject({ items: [] });
   });
 
   it('renvoie les recettes de la plus récente à la plus ancienne', async () => {

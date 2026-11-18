@@ -99,17 +99,46 @@ describe('validateId', () => {
 describe('validateListQuery', () => {
   it('convertit les filtres en valeurs utilisables par le service', () => {
     const { req, error } = run(validateListQuery, {
-      query: { category: 'dessert', favorite: 'false', q: '  tarte  ', mine: 'true' },
+      query: { category: 'dessert', favorite: 'false', q: '  tarte  ', mine: 'true', page: '3', limit: '20' },
     });
 
     expect(error).toBeUndefined();
-    expect(req.filters).toEqual({ category: 'dessert', favorite: false, q: 'tarte', mine: true });
+    expect(req.filters).toEqual({ category: 'dessert', favorite: false, q: 'tarte', mine: true, page: 3, limit: 20 });
   });
 
-  it('met favorite et q à undefined et mine à false quand ils sont absents', () => {
+  it('applique les valeurs par défaut quand les filtres sont absents', () => {
     const { req } = run(validateListQuery, { query: {} });
 
-    expect(req.filters).toEqual({ category: undefined, favorite: undefined, q: undefined, mine: false });
+    expect(req.filters).toEqual({
+      category: undefined,
+      favorite: undefined,
+      q: undefined,
+      mine: false,
+      page: 1,
+      limit: 12,
+    });
+  });
+
+  it.each(['1', '50'])('accepte limit = %s', (limit) => {
+    const { error } = run(validateListQuery, { query: { limit } });
+
+    expect(error).toBeUndefined();
+  });
+
+  it.each([
+    ['page = 0', { page: '0' }],
+    ['page négative', { page: '-1' }],
+    ['page décimale', { page: '1.5' }],
+    ['page en texte', { page: 'abc' }],
+    ['page avec zéro devant', { page: '01' }],
+    ['page répétée', { page: ['1', '2'] }],
+    ['limit = 0', { limit: '0' }],
+    ['limit = 51', { limit: '51' }],
+    ['limit énorme', { limit: '1000000' }],
+  ])('refuse avec une erreur 400 : %s', (label, query) => {
+    const { error } = run(validateListQuery, { query });
+
+    expect(error).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
   });
 
   it('refuse un q répété (tableau)', () => {

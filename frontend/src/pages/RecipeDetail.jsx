@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import { useAuth } from '../context/useAuth';
-import { categoryLabel, formatDate, formatPrepTime } from '../utils/recipe';
+import { authorName, categoryLabel, formatDate, formatPrepTime } from '../utils/recipe';
 
 function RecipeDetail() {
   const { id } = useParams();
@@ -100,6 +100,13 @@ function RecipeDetail() {
         <header className="recipe-detail-header">
           <div>
             <h1>{recipe.title}</h1>
+            <p className="recipe-author">
+              {authorName(recipe) ? (
+                <>Par <strong>{authorName(recipe)}</strong></>
+              ) : (
+                <span className="author-anonymous">Utilisateur anonyme</span>
+              )}
+            </p>
             <div className="recipe-card-meta">
               <span className={`badge badge-${recipe.category}`}>{categoryLabel(recipe.category)}</span>
               <span className="prep-time">⏱ {formatPrepTime(recipe.prepTime)}</span>

@@ -45,6 +45,10 @@ export function recipeToFormValues(recipe) {
   };
 }
 
+export function authorName(recipe) {
+  return recipe.author?.username ?? null;
+}
+
 export function formatDate(value) {
   return new Date(value).toLocaleDateString('fr-FR', {
     day: 'numeric',

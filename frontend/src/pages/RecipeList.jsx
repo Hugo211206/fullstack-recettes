@@ -5,24 +5,39 @@ import { useAuth } from '../context/useAuth';
 import RecipeCard from '../components/RecipeCard';
 import RecipeFilters from '../components/RecipeFilters';
 
+function recipesUrl(query, page) {
+  const params = new URLSearchParams(query);
+  params.set('page', String(page));
+  return `/recipes?${params.toString()}`;
+}
+
 function RecipeList() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.toString();
-  const [result, setResult] = useState({ query: null, items: [], error: '' });
+  const [result, setResult] = useState({ query: null, items: [], page: 0, totalPages: 0, total: 0, error: '' });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState('');
 
   useEffect(() => {
     let ignore = false;
 
-    apiFetch(query ? `/recipes?${query}` : '/recipes')
+    apiFetch(recipesUrl(query, 1))
       .then((data) => {
         if (!ignore) {
-          setResult({ query, items: data.items, error: '' });
+          setResult({
+            query,
+            items: data.items,
+            page: data.page,
+            totalPages: data.totalPages,
+            total: data.total,
+            error: '',
+          });
         }
       })
       .catch((err) => {
         if (!ignore) {
-          setResult({ query, items: [], error: err.message });
+          setResult({ query, items: [], page: 0, totalPages: 0, total: 0, error: err.message });
         }
       });
 
@@ -31,7 +46,33 @@ function RecipeList() {
     };
   }, [query]);
 
+  async function loadMore() {
+    setLoadingMore(true);
+    setMoreError('');
+    try {
+      const data = await apiFetch(recipesUrl(query, result.page + 1));
+      setResult((current) => {
+        if (current.query !== query) {
+          return current;
+        }
+        const known = new Set(current.items.map((recipe) => recipe.id));
+        return {
+          ...current,
+          items: [...current.items, ...data.items.filter((recipe) => !known.has(recipe.id))],
+          page: data.page,
+          totalPages: data.totalPages,
+          total: data.total,
+        };
+      });
+    } catch (err) {
+      setMoreError(err.message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   const loading = result.query !== query;
+  const hasMore = result.page < result.totalPages;
   const mine = searchParams.get('mine') === 'true';
   const hasFilters = searchParams.has('category') || searchParams.has('q') || searchParams.has('favorite');
 
@@ -98,7 +139,7 @@ function RecipeList() {
       {!loading && !result.error && result.items.length > 0 && (
         <>
           <p className="results-count" aria-live="polite">
-            {result.items.length} recette{result.items.length > 1 ? 's' : ''}
+            {result.total} recette{result.total > 1 ? 's' : ''}
           </p>
           <ul className="recipe-grid">
             {result.items.map((recipe) => (
@@ -107,6 +148,17 @@ function RecipeList() {
               </li>
             ))}
           </ul>
+          {hasMore && (
+            <div className="load-more">
+              <p className="load-more-info">
+                {result.items.length} sur {result.total} recettes affichées
+              </p>
+              {moreError && <p className="alert alert-error" role="alert">{moreError}</p>}
+              <button type="button" className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? 'Chargement…' : 'Voir plus de recettes'}
+              </button>
+            </div>
+          )}
         </>
       )}
     </main>

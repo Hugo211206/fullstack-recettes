@@ -18,7 +18,16 @@ recipeSchema.set('toJSON', {
     ret.id = ret._id.toString();
     delete ret._id;
     delete ret.__v;
-    ret.ownerId = ret.ownerId.toString();
+    const owner = ret.ownerId;
+    if (owner instanceof mongoose.Types.ObjectId) {
+      ret.ownerId = owner.toString();
+    } else if (owner) {
+      ret.ownerId = owner.id;
+      ret.author = { id: owner.id, username: owner.username ?? null };
+    } else {
+      ret.ownerId = null;
+      ret.author = null;
+    }
     return ret;
   },
 });

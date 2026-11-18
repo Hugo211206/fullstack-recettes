@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { categoryLabel, formatPrepTime } from '../utils/recipe';
+import { authorName, categoryLabel, formatPrepTime } from '../utils/recipe';
 
 function RecipeCard({ recipe, isMine }) {
   return (
@@ -12,6 +12,13 @@ function RecipeCard({ recipe, isMine }) {
           <span className="favorite-star" role="img" aria-label="Favori">★</span>
         )}
       </div>
+      <p className="recipe-card-author">
+        {authorName(recipe) ? (
+          <>par <strong>{authorName(recipe)}</strong></>
+        ) : (
+          <span className="author-anonymous">Utilisateur anonyme</span>
+        )}
+      </p>
       <div className="recipe-card-meta">
         <span className={`badge badge-${recipe.category}`}>{categoryLabel(recipe.category)}</span>
         <span className="prep-time">⏱ {formatPrepTime(recipe.prepTime)}</span>

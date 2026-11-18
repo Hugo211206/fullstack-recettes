@@ -55,6 +55,26 @@ components:
           format: password
           minLength: 8
           example: motdepasse
+    RegisterInput:
+      type: object
+      additionalProperties: false
+      required: [email, password, username]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Insensible à la casse (enregistré en minuscules)
+          example: alice@example.test
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: motdepasse
+        username:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]{3,30}$'
+          description: Pseudo public, unique, enregistré en minuscules (3 à 30 caractères, lettres, chiffres, _ ou -)
+          example: alice
     User:
       type: object
       properties:
@@ -64,6 +84,23 @@ components:
         email:
           type: string
           example: alice@example.test
+        username:
+          type: string
+          nullable: true
+          description: null pour un compte créé avant l'ajout des pseudos
+          example: alice
+    Author:
+      type: object
+      nullable: true
+      description: Auteur de la recette (jamais son email)
+      properties:
+        id:
+          type: string
+          example: 6afc1818b14b4bf92b6dde2e
+        username:
+          type: string
+          nullable: true
+          example: alice
     AuthResponse:
       type: object
       properties:
@@ -109,6 +146,8 @@ components:
           type: string
           description: Identifiant de l'auteur (déduit du JWT, jamais envoyé par le client)
           example: 6afc1818b14b4bf92b6dde2e
+        author:
+          $ref: '#/components/schemas/Author'
         createdAt:
           type: string
           format: date-time
@@ -185,6 +224,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Recipe'
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 12
+        total:
+          type: integer
+          description: Nombre total de recettes correspondant aux filtres
+          example: 30
+        totalPages:
+          type: integer
+          example: 3
 paths:
   /api/health:
     get:
@@ -206,7 +258,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthInput'
+              $ref: '#/components/schemas/RegisterInput'
       responses:
         '201':
           description: Compte créé, utilisateur connecté
@@ -234,8 +286,8 @@ paths:
   /api/recipes:
     get:
       tags: [Recipes]
-      summary: Lister les recettes (toute la communauté), avec filtres
-      description: Triées de la plus récente à la plus ancienne. Filtres facultatifs et combinables ; un filtre inconnu ou invalide renvoie 400.
+      summary: Lister les recettes (toute la communauté), avec filtres et pagination
+      description: Triées de la plus récente à la plus ancienne, avec leur auteur. Filtres et pagination facultatifs et combinables ; un paramètre inconnu ou invalide renvoie 400.
       security:
         - bearerAuth: []
       parameters:
@@ -266,6 +318,23 @@ paths:
           schema:
             type: string
             enum: ['true', 'false']
+        - name: page
+          in: query
+          required: false
+          description: Numéro de page, à partir de 1
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Nombre de recettes par page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 12
       responses:
         '200':
           description: Liste des recettes

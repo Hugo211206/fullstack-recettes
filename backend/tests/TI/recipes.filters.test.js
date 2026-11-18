@@ -47,10 +47,11 @@ describe('GET /api/recipes : filtres valides', () => {
     expect(titles(res)).toEqual(expected);
   });
 
-  it("garde l'enveloppe { items } même filtrée", async () => {
+  it("garde l'enveloppe { items } avec les informations de pagination", async () => {
     const res = await list('?category=dessert');
 
-    expect(Object.keys(res.body)).toEqual(['items']);
+    expect(Object.keys(res.body).sort()).toEqual(['items', 'limit', 'page', 'total', 'totalPages']);
+    expect(res.body.total).toBe(2);
   });
 });
 

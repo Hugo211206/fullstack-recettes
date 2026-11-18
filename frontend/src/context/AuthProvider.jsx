@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
     saveSession(data);
   }
 
-  async function register(email, password) {
-    const data = await apiFetch('/auth/register', { method: 'POST', body: { email, password } });
+  async function register(email, password, username) {
+    const data = await apiFetch('/auth/register', { method: 'POST', body: { email, password, username } });
     saveSession(data);
   }
 

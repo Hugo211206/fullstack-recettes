@@ -15,28 +15,35 @@ function emailAlreadyUsed() {
   return new AppError(409, 'EMAIL_ALREADY_USED', 'Cet email est déjà utilisé');
 }
 
-async function register(email, password) {
-  const existing = await User.findOne({ email });
-  if (existing) {
+function usernameAlreadyUsed() {
+  return new AppError(409, 'USERNAME_ALREADY_USED', 'Ce pseudo est déjà utilisé');
+}
+
+function publicUser(user) {
+  return { id: user.id, email: user.email, username: user.username ?? null };
+}
+
+async function register(email, password, username) {
+  if (await User.exists({ email })) {
     throw emailAlreadyUsed();
+  }
+  if (await User.exists({ username })) {
+    throw usernameAlreadyUsed();
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
   let user;
   try {
-    user = await User.create({ email, passwordHash });
+    user = await User.create({ email, passwordHash, username });
   } catch (err) {
     if (err.code === 11000) {
-      throw emailAlreadyUsed();
+      throw err.keyPattern?.username ? usernameAlreadyUsed() : emailAlreadyUsed();
     }
     throw err;
   }
 
-  return {
-    user: { id: user.id, email: user.email },
-    token: signToken(user),
-  };
+  return { user: publicUser(user), token: signToken(user) };
 }
 
 async function login(email, password) {
@@ -48,10 +55,7 @@ async function login(email, password) {
     throw new AppError(401, 'UNAUTHORIZED', 'Email ou mot de passe incorrect');
   }
 
-  return {
-    user: { id: user.id, email: user.email },
-    token: signToken(user),
-  };
+  return { user: publicUser(user), token: signToken(user) };
 }
 
 module.exports = { register, login };

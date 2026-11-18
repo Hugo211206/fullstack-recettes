@@ -36,6 +36,20 @@ describe('Lecture : le fil est public', () => {
     expect(res.status).toBe(200);
     expect(res.body.ownerId).toBe(alice.user.id);
   });
+
+  it("le fil affiche le pseudo de l'auteur, jamais son email", async () => {
+    const res = await as(bob).list();
+    const recipe = res.body.items.find((item) => item.id === aliceRecipe.id);
+
+    expect(recipe.author).toEqual({ id: alice.user.id, username: 'alice' });
+    expect(JSON.stringify(res.body)).not.toContain('alice@example.test');
+  });
+
+  it("le détail affiche aussi le pseudo de l'auteur", async () => {
+    const res = await as(bob).get(aliceRecipe.id);
+
+    expect(res.body.author).toEqual({ id: alice.user.id, username: 'alice' });
+  });
 });
 
 describe("Écriture : seul l'auteur modifie ou supprime", () => {

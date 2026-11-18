@@ -4,6 +4,8 @@ const User = require('../../src/models/user.model');
 
 const EMAIL = 'alice@example.test';
 const PASSWORD = 'motdepasse';
+const USERNAME = 'alice';
+const ALICE = { email: EMAIL, password: PASSWORD, username: USERNAME };
 
 function register(body) {
   return request(app).post('/api/auth/register').send(body);
@@ -15,39 +17,40 @@ function login(body) {
 
 describe('POST /api/auth/register', () => {
   it('crée un compte et répond 201 avec user et token', async () => {
-    const res = await register({ email: EMAIL, password: PASSWORD });
+    const res = await register(ALICE);
 
     expect(res.status).toBe(201);
-    expect(res.body.user).toEqual({ id: expect.any(String), email: EMAIL });
+    expect(res.body.user).toEqual({ id: expect.any(String), email: EMAIL, username: USERNAME });
     expect(res.body.token).toEqual(expect.any(String));
   });
 
   it('ne renvoie jamais le mot de passe ni son hash', async () => {
-    const res = await register({ email: EMAIL, password: PASSWORD });
+    const res = await register(ALICE);
 
     expect(res.body.user.password).toBeUndefined();
     expect(res.body.user.passwordHash).toBeUndefined();
   });
 
   it('stocke le mot de passe haché avec bcrypt', async () => {
-    await register({ email: EMAIL, password: PASSWORD });
+    await register(ALICE);
 
     const user = await User.findOne({ email: EMAIL });
     expect(user.passwordHash).not.toBe(PASSWORD);
     expect(user.passwordHash).toMatch(/^\$2[aby]\$10\$/);
   });
 
-  it("enregistre l'email en minuscules et sans espaces", async () => {
-    const res = await register({ email: '  Alice@Example.TEST ', password: PASSWORD });
+  it("enregistre l'email et le pseudo en minuscules et sans espaces", async () => {
+    const res = await register({ ...ALICE, email: '  Alice@Example.TEST ', username: ' Alice ' });
 
     expect(res.status).toBe(201);
     expect(res.body.user.email).toBe(EMAIL);
+    expect(res.body.user.username).toBe(USERNAME);
   });
 
-  it('répond 409 EMAIL_ALREADY_USED si l\'email existe déjà, même avec une autre casse', async () => {
-    await register({ email: EMAIL, password: PASSWORD });
+  it("répond 409 EMAIL_ALREADY_USED si l'email existe déjà, même avec une autre casse", async () => {
+    await register(ALICE);
 
-    const res = await register({ email: 'ALICE@example.test', password: PASSWORD });
+    const res = await register({ ...ALICE, email: 'ALICE@example.test', username: 'alice2' });
 
     expect(res.status).toBe(409);
     expect(res.body).toEqual({
@@ -55,12 +58,26 @@ describe('POST /api/auth/register', () => {
     });
   });
 
+  it('répond 409 USERNAME_ALREADY_USED si le pseudo existe déjà, même avec une autre casse', async () => {
+    await register(ALICE);
+
+    const res = await register({ ...ALICE, email: 'autre@example.test', username: 'ALICE' });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({
+      error: { code: 'USERNAME_ALREADY_USED', message: expect.any(String) },
+    });
+  });
+
   it.each([
-    ['email absent', { password: PASSWORD }],
-    ['email invalide', { email: 'pas-un-email', password: PASSWORD }],
-    ['mot de passe absent', { email: EMAIL }],
-    ['mot de passe trop court', { email: EMAIL, password: 'court' }],
-    ['champ non autorisé', { email: EMAIL, password: PASSWORD, role: 'admin' }],
+    ['email absent', { password: PASSWORD, username: USERNAME }],
+    ['email invalide', { ...ALICE, email: 'pas-un-email' }],
+    ['mot de passe absent', { email: EMAIL, username: USERNAME }],
+    ['mot de passe trop court', { ...ALICE, password: 'court' }],
+    ['pseudo absent', { email: EMAIL, password: PASSWORD }],
+    ['pseudo trop court', { ...ALICE, username: 'ab' }],
+    ['pseudo avec espace', { ...ALICE, username: 'ali ce' }],
+    ['champ non autorisé', { ...ALICE, role: 'admin' }],
     ['corps vide', {}],
   ])('répond 400 INVALID_INPUT : %s', async (label, body) => {
     const res = await register(body);
@@ -70,7 +87,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it("ne crée aucun compte quand l'entrée est invalide", async () => {
-    await register({ email: 'pas-un-email', password: PASSWORD });
+    await register({ ...ALICE, email: 'pas-un-email' });
 
     expect(await User.countDocuments()).toBe(0);
   });
@@ -78,14 +95,14 @@ describe('POST /api/auth/register', () => {
 
 describe('POST /api/auth/login', () => {
   beforeEach(async () => {
-    await register({ email: EMAIL, password: PASSWORD });
+    await register(ALICE);
   });
 
-  it('répond 200 avec user et token', async () => {
+  it('répond 200 avec user (pseudo compris) et token', async () => {
     const res = await login({ email: EMAIL, password: PASSWORD });
 
     expect(res.status).toBe(200);
-    expect(res.body.user).toEqual({ id: expect.any(String), email: EMAIL });
+    expect(res.body.user).toEqual({ id: expect.any(String), email: EMAIL, username: USERNAME });
     expect(res.body.token).toEqual(expect.any(String));
   });
 
@@ -116,6 +133,15 @@ describe('POST /api/auth/login', () => {
     expect(res.body.error.code).toBe('INVALID_INPUT');
   });
 
+  it("renvoie username: null pour un ancien compte créé sans pseudo", async () => {
+    await User.create({ email: 'ancien@example.test', passwordHash: (await User.findOne({ email: EMAIL })).passwordHash });
+
+    const res = await login({ email: 'ancien@example.test', password: PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.username).toBeNull();
+  });
+
   it('fournit un jeton qui donne accès aux recettes', async () => {
     const { body } = await login({ email: EMAIL, password: PASSWORD });
 
@@ -124,6 +150,6 @@ describe('POST /api/auth/login', () => {
       .set('Authorization', `Bearer ${body.token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ items: [] });
+    expect(res.body).toMatchObject({ items: [] });
   });
 });

@@ -1,8 +1,8 @@
 const recipeService = require('../services/recipe.service');
 
 async function list(req, res) {
-  const items = await recipeService.listRecipes(req.user.id, req.filters);
-  res.status(200).json({ items });
+  const result = await recipeService.listRecipes(req.user.id, req.filters);
+  res.status(200).json(result);
 }
 
 async function create(req, res) {
