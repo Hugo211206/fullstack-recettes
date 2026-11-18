@@ -5,8 +5,27 @@ function recipeNotFound() {
   return new AppError(404, 'NOT_FOUND', 'Recette introuvable');
 }
 
-async function listRecipes() {
-  return Recipe.find().sort({ createdAt: -1 });
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function listRecipes(userId, filters) {
+  const query = {};
+
+  if (filters.category !== undefined) {
+    query.category = filters.category;
+  }
+  if (filters.favorite !== undefined) {
+    query.favorite = filters.favorite;
+  }
+  if (filters.mine) {
+    query.ownerId = userId;
+  }
+  if (filters.q !== undefined) {
+    query.title = { $regex: escapeRegex(filters.q), $options: 'i' };
+  }
+
+  return Recipe.find(query).sort({ createdAt: -1 });
 }
 
 async function createRecipe(ownerId, data) {

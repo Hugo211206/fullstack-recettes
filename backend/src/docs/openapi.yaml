@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: Carnet de Recettes API
+  version: 1.0.0
+  description: |
+    API REST du réseau social de recettes (EFREI Full Stack JS).
+
+    Pour tester les routes protégées : appeler `POST /api/auth/login` (ou `register`), copier le `token` reçu, cliquer sur **Authorize** et le coller.
+
+    Tout utilisateur connecté peut lire toutes les recettes ; seul l'auteur d'une recette peut la modifier ou la supprimer.
+servers:
+  - url: http://localhost:3000
+tags:
+  - name: Health
+    description: État de l'API
+  - name: Auth
+    description: Inscription et connexion
+  - name: Recipes
+    description: Recettes (JWT obligatoire)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    RecipeId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant de la recette (24 caractères hexadécimaux)
+      schema:
+        type: string
+        pattern: '^[0-9a-fA-F]{24}$'
+        example: 6afc1818b14b4bf92b6dde2e
+  schemas:
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+    AuthInput:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Insensible à la casse (enregistré en minuscules)
+          example: alice@example.test
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: motdepasse
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 6afc1818b14b4bf92b6dde2e
+        email:
+          type: string
+          example: alice@example.test
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: "JWT à envoyer dans l'en-tête `Authorization: Bearer <token>` (valable 24 h)"
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWZjMTgxOGIxNGI0YmY5MmI2ZGRlMmUifQ.signature
+    Category:
+      type: string
+      enum: [starter, main, dessert, drink]
+      example: dessert
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 6afc22cf46e051e9742bfafa
+        title:
+          type: string
+          example: Tarte aux pommes
+        category:
+          $ref: '#/components/schemas/Category'
+        prepTime:
+          type: integer
+          description: Temps de préparation en minutes
+          example: 60
+        ingredients:
+          type: string
+          example: "4 pommes
+
+            1 pâte brisée
+
+            50 g de sucre"
+        instructions:
+          type: string
+          example: Étaler la pâte, disposer les pommes, cuire 40 min à 180 °C.
+        favorite:
+          type: boolean
+          example: true
+        ownerId:
+          type: string
+          description: Identifiant de l'auteur (déduit du JWT, jamais envoyé par le client)
+          example: 6afc1818b14b4bf92b6dde2e
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RecipeCreate:
+      type: object
+      additionalProperties: false
+      required: [title, category, prepTime]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Espaces de début et de fin retirés
+          example: Tarte aux pommes
+        category:
+          $ref: '#/components/schemas/Category'
+        prepTime:
+          type: integer
+          minimum: 1
+          maximum: 1440
+          description: Minutes (entier)
+          example: 60
+        ingredients:
+          type: string
+          maxLength: 2000
+          default: ''
+          example: "4 pommes
+
+            1 pâte brisée
+
+            50 g de sucre"
+        instructions:
+          type: string
+          maxLength: 5000
+          default: ''
+          example: Étaler la pâte, disposer les pommes, cuire 40 min à 180 °C.
+        favorite:
+          type: boolean
+          default: false
+          example: false
+    RecipeUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Modification partielle, au moins un champ. `id` et `ownerId` sont refusés.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        category:
+          $ref: '#/components/schemas/Category'
+        prepTime:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        ingredients:
+          type: string
+          maxLength: 2000
+        instructions:
+          type: string
+          maxLength: 5000
+        favorite:
+          type: boolean
+      example:
+        favorite: true
+    RecipeList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipe'
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Vérifie que l'API répond
+      responses:
+        '200':
+          description: API disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Créer un compte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthInput'
+      responses:
+        '201':
+          description: Compte créé, utilisateur connecté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Se connecter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthInput'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/recipes:
+    get:
+      tags: [Recipes]
+      summary: Lister les recettes (toute la communauté), avec filtres
+      description: Triées de la plus récente à la plus ancienne. Filtres facultatifs et combinables ; un filtre inconnu ou invalide renvoie 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Category'
+        - name: favorite
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['true', 'false']
+        - name: q
+          in: query
+          required: false
+          description: Recherche dans le titre, insensible à la casse (1 à 120 caractères)
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+            example: tarte
+        - name: mine
+          in: query
+          required: false
+          description: '`true` : uniquement les recettes du compte connecté'
+          schema:
+            type: string
+            enum: ['true', 'false']
+      responses:
+        '200':
+          description: Liste des recettes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeList'
+    post:
+      tags: [Recipes]
+      summary: Créer une recette
+      description: L'auteur (`ownerId`) est déduit du JWT.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeCreate'
+      responses:
+        '201':
+          description: Recette créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+  /api/recipes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RecipeId'
+    get:
+      tags: [Recipes]
+      summary: Consulter une recette
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Détail de la recette
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+    patch:
+      tags: [Recipes]
+      summary: Modifier sa recette (partiellement)
+      description: Réservé à l'auteur ; la recette d'un autre compte renvoie 404.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeUpdate'
+      responses:
+        '200':
+          description: Recette modifiée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+    delete:
+      tags: [Recipes]
+      summary: Supprimer sa recette
+      description: Réservé à l'auteur ; la recette d'un autre compte renvoie 404.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Recette supprimée (aucun corps)

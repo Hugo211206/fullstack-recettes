@@ -110,12 +110,8 @@ La base tourne dans un conteneur **Docker**, décrit par le fichier `docker-comp
 Depuis la racine `carnet-recettes/` :
 
 ```bash
-docker compose up -d     # démarre MongoDB en arrière-plan
-docker compose ps        # vérifie que le conteneur est "running"
-docker compose down      # arrête MongoDB (les données sont conservées)
+docker compose up -d
 ```
-
-> `docker compose down -v` supprime aussi le volume, donc **toutes les données**.
 
 L'API s'y connecte avec :
 
@@ -313,7 +309,7 @@ La spécification se trouve dans `backend/src/docs/openapi.yaml` et est servie p
 
 - Interface Swagger UI : http://localhost:3000/api/docs
 
-Elle décrit l'authentification Bearer, les routes `health` et `auth`, les cinq opérations sur les recettes, les schémas de requête/réponse et les erreurs 400/401/404/409.
+Elle décrit l'authentification Bearer, les routes `health` et `auth`, les cinq opérations sur les recettes, les schémas de requête et la réponse de succès de chaque route.
 
 ---
 

@@ -2,6 +2,8 @@ const AppError = require('../utils/AppError');
 
 const CATEGORIES = ['starter', 'main', 'dessert', 'drink'];
 const ALLOWED_FIELDS = ['title', 'category', 'prepTime', 'ingredients', 'instructions', 'favorite'];
+const ALLOWED_FILTERS = ['category', 'favorite', 'q', 'mine'];
+const BOOLEAN_VALUES = ['true', 'false'];
 
 function invalid(message) {
   return new AppError(400, 'INVALID_INPUT', message);
@@ -112,4 +114,39 @@ function validateId(req, res, next) {
   next();
 }
 
-module.exports = { validateCreateRecipe, validateUpdateRecipe, validateId };
+function validateListQuery(req, res, next) {
+  const query = req.query;
+
+  for (const key of Object.keys(query)) {
+    if (!ALLOWED_FILTERS.includes(key)) {
+      return next(invalid(`Filtre non autorisé : ${key}`));
+    }
+  }
+
+  if (query.category !== undefined && !CATEGORIES.includes(query.category)) {
+    return next(invalid(`category doit valoir : ${CATEGORIES.join(', ')}`));
+  }
+
+  if (query.favorite !== undefined && !BOOLEAN_VALUES.includes(query.favorite)) {
+    return next(invalid('favorite doit valoir true ou false'));
+  }
+
+  if (query.mine !== undefined && !BOOLEAN_VALUES.includes(query.mine)) {
+    return next(invalid('mine doit valoir true ou false'));
+  }
+
+  if (query.q !== undefined && (typeof query.q !== 'string' || query.q.trim().length < 1 || query.q.trim().length > 120)) {
+    return next(invalid('q doit contenir entre 1 et 120 caractères'));
+  }
+
+  req.filters = {
+    category: query.category,
+    favorite: query.favorite === undefined ? undefined : query.favorite === 'true',
+    q: query.q === undefined ? undefined : query.q.trim(),
+    mine: query.mine === 'true',
+  };
+
+  next();
+}
+
+module.exports = { validateCreateRecipe, validateUpdateRecipe, validateId, validateListQuery };
