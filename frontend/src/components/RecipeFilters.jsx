@@ -42,7 +42,7 @@ function RecipeFilters({ category, q, favorite, showFavorite, onChange }) {
             checked={favorite}
             onChange={(event) => onChange('favorite', event.target.checked ? 'true' : '')}
           />
-          Favoris uniquement
+          Mes favoris uniquement
         </label>
       )}
     </div>

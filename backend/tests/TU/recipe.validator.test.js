@@ -24,12 +24,11 @@ describe('validateCreateRecipe', () => {
       prepTime: 30,
       ingredients: '',
       instructions: '',
-      favorite: false,
     });
   });
 
   it('garde les champs facultatifs fournis', () => {
-    const body = { ...VALID, ingredients: 'pommes', instructions: 'cuire', favorite: true };
+    const body = { ...VALID, ingredients: 'pommes', instructions: 'cuire' };
 
     const { req } = run(validateCreateRecipe, { body });
 
@@ -43,6 +42,7 @@ describe('validateCreateRecipe', () => {
     ['prepTime Infinity', { ...VALID, prepTime: Infinity }],
     ['ingrédients non texte', { ...VALID, ingredients: ['pommes'] }],
     ['instructions non texte', { ...VALID, instructions: 42 }],
+    ['favorite dans le corps', { ...VALID, favorite: true }],
   ])('refuse avec une erreur 400 : %s', (label, body) => {
     const { error } = run(validateCreateRecipe, { body });
 
@@ -59,9 +59,9 @@ describe('validateUpdateRecipe', () => {
   });
 
   it("n'ajoute aucune valeur par défaut", () => {
-    const { req } = run(validateUpdateRecipe, { body: { favorite: true } });
+    const { req } = run(validateUpdateRecipe, { body: { prepTime: 20 } });
 
-    expect(req.body).toEqual({ favorite: true });
+    expect(req.body).toEqual({ prepTime: 20 });
   });
 
   it.each([

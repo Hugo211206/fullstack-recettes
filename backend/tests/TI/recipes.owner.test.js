@@ -61,7 +61,7 @@ describe("Écriture : seul l'auteur modifie ou supprime", () => {
   });
 
   it('la recette reste intacte après la tentative de B', async () => {
-    await as(bob).patch(aliceRecipe.id, { title: 'Piratée', favorite: true });
+    await as(bob).patch(aliceRecipe.id, { title: 'Piratée', prepTime: 1 });
 
     const res = await as(alice).get(aliceRecipe.id);
 

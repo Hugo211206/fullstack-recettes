@@ -12,8 +12,8 @@ Projet individuel du module **Full Stack JS** (Master 1 – EFREI).
 - Fil public : tout utilisateur connecté voit et consulte les recettes de la communauté, avec le pseudo de leur auteur.
 - Fil paginé : 12 recettes, puis bouton « Voir plus de recettes ».
 - Création, modification et suppression de ses propres recettes ; le temps de préparation se saisit en heures + minutes.
-- Filtres : catégorie, recherche dans le titre, favoris et onglet « Mes recettes ».
-- Favoris : l'auteur marque ou retire ses recettes favorites.
+- Filtres : catégorie, recherche dans le titre, « Mes favoris » et onglet « Mes recettes ».
+- Favoris personnels : chaque utilisateur peut mettre n'importe quelle recette en favori ; chaque recette affiche son nombre de favoris.
 - Validation côté serveur (et aide à la saisie côté React).
 - Interface responsive, utilisable au clavier.
 
@@ -26,9 +26,8 @@ Projet individuel du module **Full Stack JS** (Master 1 – EFREI).
 | `prepTime` | integer | Minutes entières, de 1 à 1440 | Oui |
 | `ingredients` | string | 0 à 2000 caractères, un ingrédient par ligne | Non (défaut `""`) |
 | `instructions` | string | 0 à 5000 caractères | Non (défaut `""`) |
-| `favorite` | boolean | `true` ou `false` | Non (défaut `false`) |
 
-Champs gérés uniquement par le serveur : `id` (ObjectId sous forme de chaîne), `ownerId` (auteur, déduit du JWT), `author` (`{ id, username }` de l'auteur, jamais son email), `createdAt`, `updatedAt`.
+Champs gérés uniquement par le serveur : `id` (ObjectId sous forme de chaîne), `ownerId` (auteur, déduit du JWT), `author` (`{ id, username }` de l'auteur, jamais son email), `favorite` (vrai si **l'utilisateur connecté** l'a en favori), `favoritesCount` (nombre de favoris), `createdAt`, `updatedAt`.
 
 Le compte utilisateur a un `username` : 3 à 30 caractères (lettres, chiffres, `_` ou `-`), unique et enregistré en minuscules. Les comptes créés avant son ajout ont `username: null` et apparaissent comme « Utilisateur anonyme ».
 
@@ -102,7 +101,7 @@ npm run dev
 |---|---|
 | Application React | http://localhost:5173 |
 | API | http://localhost:3000/api |
-| Documentation Swagger | http://localhost:3000/api/docs |
+| Swagger | http://localhost:3000/api/docs |
 
 En développement, Vite redirige les appels `/api` vers l'API (proxy dans `vite.config.js`), ce qui évite tout problème de CORS.
 
@@ -135,6 +134,10 @@ Toutes les routes commencent par `/api` et échangent du JSON.
 | GET | `/api/recipes/:id` | Bearer | `200` recette |
 | PATCH | `/api/recipes/:id` | Bearer (auteur) | `200` recette modifiée |
 | DELETE | `/api/recipes/:id` | Bearer (auteur) | `204` sans corps |
+| PUT | `/api/recipes/:id/favorite` | Bearer (tout utilisateur) | `200` recette, ajoutée à mes favoris |
+| DELETE | `/api/recipes/:id/favorite` | Bearer (tout utilisateur) | `200` recette, retirée de mes favoris |
+
+Les deux routes de favori sont **idempotentes** : répéter la même requête ne change pas le résultat (`$addToSet` / `$pull` en base).
 
 ### Filtres et pagination de `GET /api/recipes`
 
@@ -143,7 +146,7 @@ Facultatifs et combinables, par exemple `?mine=true&category=dessert&q=tarte&pag
 | Paramètre | Valeurs | Effet |
 |---|---|---|
 | `category` | `starter`, `main`, `dessert`, `drink` | Une seule catégorie |
-| `favorite` | `true`, `false` | Favoris ou non-favoris |
+| `favorite` | `true`, `false` | Mes favoris, ou les recettes que je n'ai pas en favori |
 | `q` | 1 à 120 caractères | Recherche dans le titre, insensible à la casse |
 | `mine` | `true`, `false` | `true` : seulement les recettes de l'utilisateur connecté |
 | `page` | entier ≥ 1 (défaut `1`) | Numéro de page |
@@ -208,7 +211,7 @@ carnet-recettes/
 - **Propriété** : `ownerId` est toujours déduit du JWT, jamais accepté du client. La modification et la suppression recherchent le couple `id` + `ownerId`.
 - **404 plutôt que 403** pour la recette d'un autre compte : la réponse est identique à celle d'une recette inexistante, l'API ne révèle rien.
 - **Connexion** : même message `401` pour un email inconnu et un mauvais mot de passe.
-- **Vie privée** : l'auteur d'une recette est chargé avec `populate` en sélectionnant uniquement son `username` ; l'email des autres utilisateurs n'est jamais renvoyé.
+- **Vie privée** : l'auteur d'une recette est chargé avec `populate` en sélectionnant uniquement son `username` ; l'email des autres utilisateurs n'est jamais renvoyé. La liste des utilisateurs qui ont mis une recette en favori (`favoritedBy`) ne sort jamais de l'API : seuls `favorite` et `favoritesCount` sont renvoyés.
 - **Recherche** : le texte de `q` est échappé avant d'être utilisé dans une expression régulière (pas d'injection ni de ReDoS).
 - **Erreurs imprévues** : `500` avec un message générique, le détail reste dans les logs serveur.
 - **Stockage du JWT côté navigateur** : `localStorage`. Choix simple qui garde la session après un rechargement ; contrepartie : un script injecté (XSS) pourrait le lire. React échappe le texte affiché, ce qui limite ce risque. Un JWT expiré ou invalide déconnecte automatiquement l'utilisateur.
@@ -239,6 +242,7 @@ Scénarios couverts :
 - Propriété : B lit la recette de A (200) mais ne peut ni la modifier ni la supprimer (404), et la recette reste intacte.
 - Auteur affiché dans le fil et le détail, sans jamais l'email.
 - Filtres seuls et combinés, recherche avec caractères spéciaux, filtres invalides → 400.
+- Favoris : B met en favori la recette d'A sans la modifier, compteur à jour, ajout et retrait idempotents, `?favorite=true` limité à mes favoris, `favoritedBy` jamais renvoyé.
 - Pagination : taille par défaut, dernière page, parcours complet sans doublon, combinaison avec les filtres, `page` ou `limit` invalide → 400.
 
 Couverture du code du back-end : environ 95 %.
@@ -267,9 +271,8 @@ Couverture du code du back-end : environ 95 %.
 
 ## 12. Limites et améliorations
 
-- Favoris choisis par l'auteur de la recette, pas par chaque utilisateur.
 - Recherche limitée au titre ; ingrédients en texte libre.
 - Pas de photo ni de renouvellement automatique du JWT.
 - Pagination par décalage (`skip`) : simple, mais moins efficace qu'une pagination par curseur sur de très gros volumes.
 
-Pistes : favoris et « j'aime » par utilisateur, page de profil d'un auteur, photos, nombre de personnes avec ajustement des quantités.
+Pistes : page de profil d'un auteur, photos, nombre de personnes avec ajustement des quantités.

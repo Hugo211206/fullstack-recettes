@@ -7,7 +7,7 @@ const recipeSchema = new mongoose.Schema(
     prepTime: { type: Number, required: true, min: 1, max: 1440 },
     ingredients: { type: String, default: '', maxlength: 2000 },
     instructions: { type: String, default: '', maxlength: 5000 },
-    favorite: { type: Boolean, default: false },
+    favoritedBy: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   },
   { timestamps: true }
@@ -18,6 +18,8 @@ recipeSchema.set('toJSON', {
     ret.id = ret._id.toString();
     delete ret._id;
     delete ret.__v;
+    delete ret.favorite;
+    delete ret.favoritedBy;
     const owner = ret.ownerId;
     if (owner instanceof mongoose.Types.ObjectId) {
       ret.ownerId = owner.toString();

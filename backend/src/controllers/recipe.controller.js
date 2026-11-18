@@ -11,7 +11,7 @@ async function create(req, res) {
 }
 
 async function getOne(req, res) {
-  const recipe = await recipeService.getRecipeById(req.params.id);
+  const recipe = await recipeService.getRecipeById(req.user.id, req.params.id);
   res.status(200).json(recipe);
 }
 
@@ -25,4 +25,14 @@ async function remove(req, res) {
   res.status(204).end();
 }
 
-module.exports = { list, create, getOne, update, remove };
+async function addFavorite(req, res) {
+  const recipe = await recipeService.setFavorite(req.user.id, req.params.id, true);
+  res.status(200).json(recipe);
+}
+
+async function removeFavorite(req, res) {
+  const recipe = await recipeService.setFavorite(req.user.id, req.params.id, false);
+  res.status(200).json(recipe);
+}
+
+module.exports = { list, create, getOne, update, remove, addFavorite, removeFavorite };

@@ -30,7 +30,6 @@ export const EMPTY_RECIPE_VALUES = {
   minutes: '',
   ingredients: '',
   instructions: '',
-  favorite: false,
 };
 
 export function recipeToFormValues(recipe) {
@@ -41,7 +40,6 @@ export function recipeToFormValues(recipe) {
     minutes: String(recipe.prepTime % 60),
     ingredients: recipe.ingredients,
     instructions: recipe.instructions,
-    favorite: recipe.favorite,
   };
 }
 

@@ -1,7 +1,7 @@
 const AppError = require('../utils/AppError');
 
 const CATEGORIES = ['starter', 'main', 'dessert', 'drink'];
-const ALLOWED_FIELDS = ['title', 'category', 'prepTime', 'ingredients', 'instructions', 'favorite'];
+const ALLOWED_FIELDS = ['title', 'category', 'prepTime', 'ingredients', 'instructions'];
 const ALLOWED_FILTERS = ['category', 'favorite', 'q', 'mine', 'page', 'limit'];
 const BOOLEAN_VALUES = ['true', 'false'];
 const DEFAULT_LIMIT = 12;
@@ -45,10 +45,6 @@ function validateCreateRecipe(req, res, next) {
   return next(invalid('instructions doit être un texte de 5000 caractères maximum'));
   }
 
-  if (body.favorite !== undefined && typeof body.favorite !== 'boolean') {
-  return next(invalid('favorite doit valoir true ou false'));
-  }
-  
 
   req.body = {
     title: body.title.trim(),
@@ -56,7 +52,6 @@ function validateCreateRecipe(req, res, next) {
     prepTime: body.prepTime,
     ingredients: body.ingredients ?? '',
     instructions: body.instructions ?? '',
-    favorite: body.favorite ?? false,
   };
 
   next();
@@ -97,10 +92,6 @@ function validateUpdateRecipe(req, res, next) {
 
   if (body.instructions !== undefined && (typeof body.instructions !== 'string' || body.instructions.length > 5000)) {
     return next(invalid('instructions doit être un texte de 5000 caractères maximum'));
-  }
-
-  if (body.favorite !== undefined && typeof body.favorite !== 'boolean') {
-    return next(invalid('favorite doit valoir true ou false'));
   }
 
   if (body.title !== undefined) {

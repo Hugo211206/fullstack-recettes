@@ -65,9 +65,8 @@ function RecipeDetail() {
     setBusy(true);
     setActionError('');
     try {
-      const updated = await apiFetch(`/recipes/${id}`, {
-        method: 'PATCH',
-        body: { favorite: !recipe.favorite },
+      const updated = await apiFetch(`/recipes/${id}/favorite`, {
+        method: recipe.favorite ? 'DELETE' : 'PUT',
       });
       setResult({ id, recipe: updated, error: '' });
     } catch (err) {
@@ -110,30 +109,32 @@ function RecipeDetail() {
             <div className="recipe-card-meta">
               <span className={`badge badge-${recipe.category}`}>{categoryLabel(recipe.category)}</span>
               <span className="prep-time">⏱ {formatPrepTime(recipe.prepTime)}</span>
-              {recipe.favorite && (
-                <span className="favorite-star" role="img" aria-label="Favori">★</span>
-              )}
+              <span className={`favorite-count${recipe.favorite ? ' is-favorite' : ''}`}>
+                ★ {recipe.favoritesCount} favori{recipe.favoritesCount > 1 ? 's' : ''}
+              </span>
               {isMine && <span className="badge badge-mine">Ma recette</span>}
             </div>
           </div>
 
-          {isMine && (
-            <div className="recipe-actions">
-              <button
-                type="button"
-                className="btn btn-secondary btn-favorite"
-                aria-pressed={recipe.favorite}
-                onClick={toggleFavorite}
-                disabled={busy}
-              >
-                {recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris'}
-              </button>
-              <Link to={`/recipes/${recipe.id}/edit`} className="btn btn-secondary">Modifier</Link>
-              <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={busy}>
-                Supprimer
-              </button>
-            </div>
-          )}
+          <div className="recipe-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-favorite"
+              aria-pressed={recipe.favorite}
+              onClick={toggleFavorite}
+              disabled={busy}
+            >
+              {recipe.favorite ? '★ Retirer de mes favoris' : '☆ Ajouter à mes favoris'}
+            </button>
+            {isMine && (
+              <>
+                <Link to={`/recipes/${recipe.id}/edit`} className="btn btn-secondary">Modifier</Link>
+                <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={busy}>
+                  Supprimer
+                </button>
+              </>
+            )}
+          </div>
         </header>
 
         {actionError && <p className="alert alert-error" role="alert">{actionError}</p>}

@@ -34,11 +34,12 @@ describe('POST /api/recipes', () => {
       prepTime: 60,
       ingredients: '',
       instructions: '',
-      favorite: false,
       ownerId: user.id,
       author: { id: user.id, username: user.username },
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
+      favorite: false,
+      favoritesCount: 0,
     });
   });
 
@@ -55,7 +56,6 @@ describe('POST /api/recipes', () => {
     ['prepTime = 1440', { prepTime: 1440 }],
     ['ingrédients de 2000 caractères', { ingredients: 'a'.repeat(2000) }],
     ['instructions de 5000 caractères', { instructions: 'a'.repeat(5000) }],
-    ['favorite = true', { favorite: true }],
   ])('accepte la valeur limite : %s', async (label, overrides) => {
     const res = await api().create({ ...VALID_RECIPE, ...overrides });
 
@@ -74,7 +74,7 @@ describe('POST /api/recipes', () => {
     ['prepTime en texte', { prepTime: '60' }],
     ['ingrédients de 2001 caractères', { ingredients: 'a'.repeat(2001) }],
     ['instructions de 5001 caractères', { instructions: 'a'.repeat(5001) }],
-    ['favorite non booléen', { favorite: 'oui' }],
+    ['favorite (géré par sa propre route)', { favorite: true }],
     ['ownerId fourni par le client', { ownerId: '000000000000000000000000' }],
     ['id fourni par le client', { id: '000000000000000000000000' }],
     ['champ inconnu', { difficulty: 'facile' }],
@@ -171,21 +171,12 @@ describe('PATCH /api/recipes/:id', () => {
     expect(res.body.ingredients).toBe('4 pommes');
   });
 
-  it('accepte favorite = false', async () => {
-    const recipe = await createRecipe(token, { favorite: true });
-
-    const res = await api().patch(recipe.id, { favorite: false });
-
-    expect(res.status).toBe(200);
-    expect(res.body.favorite).toBe(false);
-  });
-
   it.each([
     ['corps vide', {}],
     ['titre vide', { title: '   ' }],
     ['catégorie hors liste', { category: 'snack' }],
     ['prepTime décimal', { prepTime: 1.5 }],
-    ['favorite non booléen', { favorite: 'oui' }],
+    ['favorite (géré par sa propre route)', { favorite: true }],
     ['ownerId', { ownerId: '000000000000000000000000' }],
     ['id', { id: '000000000000000000000000' }],
     ['champ inconnu', { difficulty: 'facile' }],

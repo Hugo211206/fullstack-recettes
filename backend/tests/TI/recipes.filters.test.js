@@ -8,11 +8,15 @@ beforeEach(async () => {
   alice = await createUser('alice@example.test');
   const bob = await createUser('bob@example.test');
 
-  await createRecipe(alice.token, { title: 'Tarte aux pommes', category: 'dessert', favorite: true });
+  const tarte = await createRecipe(alice.token, { title: 'Tarte aux pommes', category: 'dessert' });
   await createRecipe(alice.token, { title: 'Velouté de potiron', category: 'starter' });
   await createRecipe(bob.token, { title: 'Tarte au citron', category: 'dessert' });
-  await createRecipe(bob.token, { title: 'Limonade (maison)', category: 'drink', favorite: true });
+  const limonade = await createRecipe(bob.token, { title: 'Limonade (maison)', category: 'drink' });
   await createRecipe(bob.token, { title: 'Poulet basquaise', category: 'main' });
+
+  for (const recipe of [tarte, limonade]) {
+    await request(app).put(`/api/recipes/${recipe.id}/favorite`).set('Authorization', `Bearer ${alice.token}`);
+  }
 });
 
 function list(query) {

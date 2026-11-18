@@ -92,7 +92,6 @@ function RecipeList() {
       next.set('mine', 'true');
     } else {
       next.delete('mine');
-      next.delete('favorite');
     }
     setSearchParams(next);
   }
@@ -116,7 +115,7 @@ function RecipeList() {
         category={searchParams.get('category') ?? ''}
         q={searchParams.get('q') ?? ''}
         favorite={searchParams.get('favorite') === 'true'}
-        showFavorite={mine}
+        showFavorite
         onChange={updateFilter}
       />
 

@@ -8,8 +8,13 @@ function RecipeCard({ recipe, isMine }) {
         <h2 className="recipe-card-title">
           <Link to={`/recipes/${recipe.id}`}>{recipe.title}</Link>
         </h2>
-        {recipe.favorite && (
-          <span className="favorite-star" role="img" aria-label="Favori">★</span>
+        {recipe.favoritesCount > 0 && (
+          <span
+            className={`favorite-count${recipe.favorite ? ' is-favorite' : ''}`}
+            aria-label={`${recipe.favoritesCount} favori${recipe.favoritesCount > 1 ? 's' : ''}${recipe.favorite ? ', dont vous' : ''}`}
+          >
+            ★ {recipe.favoritesCount}
+          </span>
         )}
       </div>
       <p className="recipe-card-author">
