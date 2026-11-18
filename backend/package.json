@@ -10,13 +10,20 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "jest --runInBand",
-    "test:coverage": "jest --runInBand --coverage"
+    "test:coverage": "jest --runInBand --coverage",
+    "lint": "eslint ."
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
     "testTimeout": 30000,
-    "collectCoverageFrom": ["src/**/*.js", "!src/server.js", "!src/config/db.js"]
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/server.js",
+      "!src/config/db.js"
+    ]
   },
   "config": {
     "mongodbMemoryServer": {
@@ -38,6 +45,9 @@
     "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
     "jest": "^30.5.2",
     "mongodb-memory-server": "^11.3.0",
     "supertest": "^7.3.2"

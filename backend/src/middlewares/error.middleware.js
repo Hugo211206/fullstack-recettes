@@ -4,7 +4,7 @@ function notFoundHandler(req, res, next) {
   next(new AppError(404, 'NOT_FOUND', 'Route introuvable'));
 }
 
-function errorHandler(err, req, res, next) {
+function errorHandler(err, req, res, _next) {
   if (err instanceof AppError) {
     return res.status(err.status).json({
       error: { code: err.code, message: err.message },

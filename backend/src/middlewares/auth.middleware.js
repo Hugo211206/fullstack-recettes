@@ -18,7 +18,7 @@ function requireAuth(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.user = { id: payload.sub };
     next();
-  } catch (err) {
+  } catch {
     return next(unauthorized('Jeton invalide ou expiré'));
   }
 }
