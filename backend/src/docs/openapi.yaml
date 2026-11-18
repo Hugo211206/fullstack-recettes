@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Carnet de Recettes API
+  title: RecettesX API
   version: 1.0.0
   description: |
     API REST du réseau social de recettes (EFREI Full Stack JS).

@@ -1,0 +1,40 @@
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding-top: 3rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card h1 {
+  margin-bottom: 0.25rem;
+}
+
+.auth-subtitle {
+  margin-bottom: 1.5rem;
+  color: var(--color-muted);
+}
+
+.auth-card .alert {
+  margin-bottom: 1rem;
+}
+
+.auth-card .btn-primary {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.auth-switch {
+  margin: 1.25rem 0 0;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+@media (max-width: 600px) {
+  .auth-page {
+    padding-top: 1.5rem;
+  }
+}

@@ -1,6 +1,6 @@
-# Carnet de Recettes
+# RecettesX
 
-Application web full stack JavaScript permettant à chaque utilisateur de gérer **son propre carnet de recettes de cuisine** : créer, consulter, modifier et supprimer des recettes privées, accessibles uniquement après connexion.
+**RecettesX** est un réseau social de recettes de cuisine, en application web full stack JavaScript : chaque utilisateur connecté découvre les recettes de la communauté, publie les siennes, et reste le seul à pouvoir les modifier ou les supprimer.
 
 Projet individuel réalisé dans le cadre du module **Full Stack JS** (Master 1 – EFREI).
 
