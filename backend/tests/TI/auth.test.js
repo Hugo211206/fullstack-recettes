@@ -81,4 +81,49 @@ describe('POST /api/auth/login', () => {
     await register({ email: EMAIL, password: PASSWORD });
   });
 
+  it('répond 200 avec user et token', async () => {
+    const res = await login({ email: EMAIL, password: PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toEqual({ id: expect.any(String), email: EMAIL });
+    expect(res.body.token).toEqual(expect.any(String));
+  });
+
+  it("accepte l'email avec une autre casse", async () => {
+    const res = await login({ email: 'ALICE@Example.test', password: PASSWORD });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('répond 401 UNAUTHORIZED si le mot de passe est faux', async () => {
+    const res = await login({ email: EMAIL, password: 'mauvaismdp' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it("répond 401 si l'email est inconnu", async () => {
+    const res = await login({ email: 'inconnu@example.test', password: PASSWORD });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it("répond 400 si l'email est invalide", async () => {
+    const res = await login({ email: 'pas-un-email', password: PASSWORD });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('fournit un jeton qui donne accès aux recettes', async () => {
+    const { body } = await login({ email: EMAIL, password: PASSWORD });
+
+    const res = await request(app)
+      .get('/api/recipes')
+      .set('Authorization', `Bearer ${body.token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ items: [] });
+  });
 });
